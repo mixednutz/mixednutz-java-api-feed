@@ -36,7 +36,9 @@ public class SimpleFeedReader implements FeedReader {
 	private static final MediaType[] VALID_MEDIA_TYPES = new MediaType[]{
 			MediaType.parseMediaType("application/rss+xml"),
 			MediaType.APPLICATION_ATOM_XML, 
-			MediaType.TEXT_XML, MediaType.APPLICATION_XML
+			MediaType.APPLICATION_XML,
+			MediaType.TEXT_XML, 
+			MediaType.parseMediaType("text/rss+xml") 
 			};
 	
 	private static final List<MediaType> ACCEPT_MEDIA_TYPES = Arrays.asList(new MediaType[]{
@@ -44,7 +46,8 @@ public class SimpleFeedReader implements FeedReader {
 			MediaType.parseMediaType("application/rdf+xml;q=0.8"), 
 			MediaType.parseMediaType("application/atom+xml;q=0.6"), 
 			MediaType.parseMediaType("application/xml;q=0.4"),
-			MediaType.parseMediaType("text/xml;q=0.4") 
+			MediaType.parseMediaType("text/xml;q=0.4"),
+			MediaType.parseMediaType("text/rss+xml;q=0.4") 
 			});
 	
 	private static final String CRAWLER_USER_AGENT = "Feedmebot/1.0";
@@ -67,7 +70,7 @@ public class SimpleFeedReader implements FeedReader {
 		CrawlerContext(String url, Long ifModifiedSince) {
 			super();
 			this.requestedUrl = url;
-			this.rest = new RestTemplate();
+			this.rest = restTemplate();
 			this.ifModifiedSince = ifModifiedSince;
 		}
 		
@@ -112,6 +115,13 @@ public class SimpleFeedReader implements FeedReader {
 			if (HttpMethod.HEAD.equals(method)) {
 				LOG.debug("Execute: {} {}", HttpMethod.HEAD, uri);
 				responseEntity = rest.exchange(uri, HttpMethod.HEAD, requestEntity, String.class);
+				if (HttpStatus.FOUND.equals(responseEntity.getStatusCode())) {
+					if (responseEntity.getHeaders().getLocation()!=null) {
+						uri = responseEntity.getHeaders().getLocation();
+						currentUrl = uri.toString();
+						responseEntity = rest.exchange(uri, HttpMethod.GET, requestEntity, String.class);
+					}
+				}
 				return responseEntity.getHeaders();
 			}
 			headers.add("X-Description","I'm resending this as a GET because your HEAD response isnt acknowleging my ACCEPT header");
@@ -292,6 +302,10 @@ public class SimpleFeedReader implements FeedReader {
 			crawlerResponse.setStatusCode(HttpStatus.NOT_MODIFIED.value());
 			crawlerResponse.setStatusMessage(HttpStatus.NOT_MODIFIED.getReasonPhrase());
 			crawlerResponse.setCrawledDateTime(ZonedDateTime.now());
+		}
+		
+		private RestTemplate restTemplate() {
+			return new RestTemplate();
 		}
 	}
 	
