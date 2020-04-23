@@ -41,7 +41,7 @@ public class SimpleFeedReader implements FeedReader {
 	
 	private static final List<MediaType> ACCEPT_MEDIA_TYPES = Arrays.asList(new MediaType[]{
 			MediaType.parseMediaType("application/rss+xml"),
-			MediaType.parseMediaType("application/rdf_xml;q=0.8"), 
+			MediaType.parseMediaType("application/rdf+xml;q=0.8"), 
 			MediaType.parseMediaType("application/atom+xml;q=0.6"), 
 			MediaType.parseMediaType("application/xml;q=0.4"),
 			MediaType.parseMediaType("text/xml;q=0.4") 
@@ -57,8 +57,8 @@ public class SimpleFeedReader implements FeedReader {
 	}
 	
 	private class CrawlerContext {
-		private RestTemplate rest;
-		private String requestedUrl;
+		private final RestTemplate rest;
+		private final String requestedUrl;
 		private String currentUrl;
 		private ResponseEntity<?> responseEntity;
 		private ReadResponse<SyndFeed> crawlerResponse;
@@ -78,14 +78,13 @@ public class SimpleFeedReader implements FeedReader {
 				LOG.info("Crawling: {}; lastModified: {}({})", 
 						requestedUrl, ifModifiedSince, Instant.ofEpochMilli(ifModifiedSince));
 			}
-			
 			crawlerResponse = new ReadResponse<>();
 			crawlerResponse.setCrawlerName("");
 			try {
 				if (isValidFeed()) {
 					if (!isModified()) {
 						LOG.info("Feed {} reports no changes since {}({})", 
-								currentUrl);
+								currentUrl, ifModifiedSince, Instant.ofEpochMilli(ifModifiedSince));
 						handleHttpNotModified();
 					} else {
 						readFeed(currentUrl, crawlerResponse);
@@ -93,14 +92,15 @@ public class SimpleFeedReader implements FeedReader {
 							LOG.info("Feed {} returned {} entries", 
 									currentUrl, crawlerResponse.getBody().getEntries().size());
 						} else {
-							LOG.info("Feed {} was unable to be read: {}", currentUrl);
+							LOG.info("Feed {} was unable to be read: {}", currentUrl, 
+								 crawlerResponse.getStatusMessage());
 						}
 					}
 				} else {
 					LOG.info("Bad XML: {}", currentUrl);
 				}
 			} catch (Exception e) {
-				LOG.error("Uncaught Exception", e);
+				LOG.error("Uncaught Exception!", e);
 				handleException(e);
 			}
 		}
@@ -157,17 +157,19 @@ public class SimpleFeedReader implements FeedReader {
 						LOG.info("Unable to run HEAD on {} but we were able to run get on it instead", currentUrl);
 					} catch (HttpStatusCodeException e2) {
 						LOG.debug("Unable to run GET on {} {}\n{}", currentUrl, e2.getStatusCode(), e2.getResponseBodyAsString());
+						//Don't care what the new exception is.  Handle the original.
 						LOG.info("Unable to run HEAD on "+ currentUrl, e);
 						handleHttpStatusCodeException(e);
 						return false;
 					} catch (Exception e2) {
 						LOG.debug("Unable to run GET on "+ currentUrl, e2);
+						//Don't care what the new exception is.  Handle the original.
 						LOG.info("Unable to run head on ", currentUrl, e);
 						handleHttpStatusCodeException(e);
 						return false;
 					}
 				} else {
-					//if tooManyRequests we're just going to give up
+					//if TOO_MANY_REQUESTS we're just going to give up
 					handleHttpStatusCodeException(e);
 					return false;
 				}
@@ -225,7 +227,7 @@ public class SimpleFeedReader implements FeedReader {
 				uri = new URI(urlString);
 				url = uri.toURL();
 			} catch (Exception e) {
-				LOG.error("BAD URL", e);
+				LOG.error("BAD URL:  "+urlString, e);
 				return;
 			} 
 			crawlerResponse.setUrl(url);
