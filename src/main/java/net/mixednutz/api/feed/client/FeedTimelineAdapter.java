@@ -13,6 +13,7 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import net.mixednutz.api.client.TimelineClient;
 import net.mixednutz.api.core.model.Page;
 import net.mixednutz.api.core.model.PageRequest;
+import net.mixednutz.api.feed.model.FeedElement;
 import net.mixednutz.api.feed.model.FeedEntryElement;
 import net.mixednutz.api.model.IPage;
 import net.mixednutz.api.model.IPageRequest;
@@ -56,6 +57,14 @@ public class FeedTimelineAdapter implements TimelineClient<Long> {
 					pagination.getDirection());
 		} 
 		return PageRequest.first(pagination.getPageSize(), pagination.getDirection(), Long.class);
+	}
+	
+	public FeedElement getFeedElement() {
+		ReadResponse<SyndFeed> response = reader.readFeed(url, null);
+		if (response.getBody()!=null) {
+			return new FeedElement(response.getBody());
+		}
+		return null;
 	}
 	
 	@Override
