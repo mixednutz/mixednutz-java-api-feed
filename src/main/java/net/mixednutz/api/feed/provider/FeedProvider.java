@@ -1,7 +1,6 @@
 package net.mixednutz.api.feed.provider;
 
 import com.andrewfesta.feedme.FeedReader;
-import com.andrewfesta.feedme.impl.SimpleFeedReader;
 
 import net.mixednutz.api.core.provider.AbstractApiProvider;
 import net.mixednutz.api.feed.client.FeedAdapter;
@@ -12,10 +11,10 @@ public class FeedProvider<Credentials> extends AbstractApiProvider<FeedAdapter, 
 	String url;
 	FeedReader reader;
 	
-	public FeedProvider(String url, Class<Credentials> credentialsInterface) {
+	public FeedProvider(FeedReader reader, String url, Class<Credentials> credentialsInterface) {
 		super(FeedAdapter.class, credentialsInterface);
 		this.url = url;
-		this.reader = new SimpleFeedReader();
+		this.reader = reader;
 	}
 
 	@Override
